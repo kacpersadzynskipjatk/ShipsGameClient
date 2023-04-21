@@ -12,4 +12,6 @@ func main() {
 	gc := game_client.NewGameClient(&c)
 	game := game.NewGame(gc)
 	print(game.Token)
+	print(game.GameClient.GetGameBoards(game.Token))
+	//game.DisplayBoard()
 }

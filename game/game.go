@@ -1,6 +1,7 @@
 package game
 
 import "main/game_client"
+import "github.com/grupawp/warships-lightgui/v2"
 
 type Game struct {
 	GameClient game_client.GameClient
@@ -35,5 +36,6 @@ func (g *Game)StartGame() {
 }
 
 func (g *Game)DisplayBoard() {
-	
+	board := board.New(board.NewConfig())
+	board.Display()
 }
