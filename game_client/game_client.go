@@ -9,23 +9,23 @@ import (
 )
 
 const (
-	ServerAddress = "https://go-pjatk-server.fly.dev/api/game"
+	ServerAddress      = "https://go-pjatk-server.fly.dev/api/game"
 	ServerBoardAddress = "https://go-pjatk-server.fly.dev/api/game/board"
-	ServerFireAddress = "https://go-pjatk-server.fly.dev/api/game/fire"
+	ServerFireAddress  = "https://go-pjatk-server.fly.dev/api/game/fire"
 )
 
 type GameClient struct {
 	HttpClient http.Client
 }
 
-func NewGameClient(c *http.Client) (*GameClient) {
+func NewGameClient(c *http.Client) *GameClient {
 	gc := &GameClient{
 		HttpClient: *c,
 	}
 	return gc
 }
 
-func (gc *GameClient) PostStartGame(params map[string]any) string{
+func (gc *GameClient) PostStartGame(params map[string]any) string {
 
 	var reqBody []byte = nil
 	if params != nil {
@@ -43,12 +43,12 @@ func (gc *GameClient) PostStartGame(params map[string]any) string{
 	return resp.Header.Get("x-auth-token")
 }
 
-func (gc *GameClient) PostFire(){
+func (gc *GameClient) PostFire() {
 
 }
 
 func (gc *GameClient) GetRequest(address, token string) string {
-	req, _ := http.NewRequest("GET", ServerAddress, nil)
+	req, _ := http.NewRequest("GET", address, nil)
 	req.Header.Add("X-auth-token", token)
 	resp, err := gc.HttpClient.Do(req)
 
@@ -67,10 +67,10 @@ func (gc *GameClient) GetRequest(address, token string) string {
 	return response
 }
 
-func (gc *GameClient) GetGameStatus(token string) string{
+func (gc *GameClient) GetGameStatus(token string) string {
 	return gc.GetRequest(ServerAddress, token)
 }
 
-func (gc *GameClient) GetGameBoards(token string) string{
+func (gc *GameClient) GetGameBoards(token string) string {
 	return gc.GetRequest(ServerBoardAddress, token)
 }
