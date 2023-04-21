@@ -11,5 +11,5 @@ func main() {
 	c := http.Client{Timeout: 5 * time.Second}
 	gc := game_client.NewGameClient(&c)
 	game := game.NewGame(gc)
-	game.StartGame()
+	print(game.Token)
 }

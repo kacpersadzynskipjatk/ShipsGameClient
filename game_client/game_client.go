@@ -1,6 +1,10 @@
 package game_client
 
-import "net/http"
+import (
+	"bytes"
+	"encoding/json"
+	"net/http"
+)
 
 const (
 	ServerAddress = "https://go-pjatk-server.fly.dev/api/game"
@@ -19,8 +23,15 @@ func NewGameClient(c *http.Client) (*GameClient) {
 	return gc
 }
 
-func (gc *GameClient) PostStartGame(){
-	req, err := http.NewRequest("POST", ServerAddress, nil)
+func (gc *GameClient) PostStartGame(params map[string]any) string{
+	var reqBody []byte = nil
+	if params != nil {
+		reqBody, _ = json.Marshal(params)
+	}
+	req, _ := http.NewRequest("POST", ServerAddress, bytes.NewBuffer(reqBody))
+	resp, _ := gc.HttpClient.Do(req)
+	defer resp.Body.Close()
+	return resp.Header.Get("x-auth-token")
 }
 
 func (gc *GameClient) GetGameStatus(){
