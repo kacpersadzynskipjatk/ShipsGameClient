@@ -25,7 +25,5 @@ func main() {
 	}
 	newGame := game.NewGameParams(gc, coords, "desc", "Kacper", "", true)
 	print(newGame.Token)
-	print(newGame.GameClient.GetGameBoards(newGame.Token))
-	print(newGame.GameClient.GetGameStatus(newGame.Token))
 	newGame.DisplayBoard()
 }
