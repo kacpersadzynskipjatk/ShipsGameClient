@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"main/game"
 	"main/game_client"
 	"net/http"
@@ -8,9 +9,8 @@ import (
 )
 
 func main() {
-	c := http.Client{Timeout: 5 * time.Second}
+	c := http.Client{Timeout: 15 * time.Second}
 	gc := game_client.NewGameClient(&c)
-	//newGame := game.NewGame(gc)
 	coords := []string{
 		"F1", "F2", "F3", "F4",
 		"A1", "B1", "C1",
@@ -23,7 +23,9 @@ func main() {
 		"J5",
 		"J3",
 	}
+	//newGame := game.NewGame(gc)
 	newGame := game.NewGameParams(gc, coords, "desc", "Kacper", "", true)
-	print(newGame.Token)
 	newGame.DisplayBoard()
+	fmt.Print(newGame.Token + "\n")
+	newGame.Fire("A2")
 }

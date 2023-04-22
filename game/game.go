@@ -2,7 +2,6 @@ package game
 
 import (
 	"encoding/json"
-	"fmt"
 	"main/game_client"
 
 	"github.com/fatih/color"
@@ -14,6 +13,7 @@ type Game struct {
 	GameClient game_client.GameClient
 	Token      string
 	Status     string
+	Board      board.Board
 }
 
 func NewGame(c *game_client.GameClient) *Game {
@@ -43,26 +43,39 @@ func (g *Game) StartGame() {
 	//main game loop
 }
 
+func (g *Game) Fire(coord string) {
+	g.CheckGameStatus()
+	
+	//make a object to unmashall all responses???
+
+	resp := g.GameClient.PostFire(coord, g.Token)
+	//shotResult, _ := unmarshalToSlice(resp)
+	print(resp)
+	//g.Board.Set("Right",)
+	//g.Board.Display()
+}
+
 func (g *Game) CheckGameStatus() {
 	g.Status = g.GameClient.GetGameStatus(g.Token)
 }
 
 func (g *Game) DisplayBoard() {
 	cfg := board.NewConfig()
-	cfg.HitChar = '*'
+	cfg.HitChar = '#'
 	cfg.HitColor = color.FgRed
 	cfg.BorderColor = color.BgRed
 	cfg.RulerTextColor = color.BgBlue
 	board := board.New(cfg)
-	board.Display()
-	
+
 	jsonShips := g.GameClient.GetGameBoards(g.Token)
-	slice, _ := getBoardSlice(jsonShips)
-	fmt.Println(slice)
-	board.Import(slice)
+	coords, _ := unmarshalToSlice(jsonShips)
+
+	board.Import(coords)
+	board.Display()
+	g.Board = *board
 }
 
-func getBoardSlice(jsonStr string) ([]string, error) {
+func unmarshalToSlice(jsonStr string) ([]string, error) {
 	var data map[string][]string
 	err := json.Unmarshal([]byte(jsonStr), &data)
 	if err != nil {
@@ -71,11 +84,5 @@ func getBoardSlice(jsonStr string) ([]string, error) {
 
 	board := data["board"]
 
-	// Create a new slice of strings in the desired format
-	var boardSlice []string
-	for _, s := range board {
-		boardSlice = append(boardSlice, fmt.Sprintf(`"%s"`, s))
-	}
-
-	return boardSlice, nil
+	return board, nil
 }

@@ -43,8 +43,28 @@ func (gc *GameClient) PostStartGame(params map[string]any) string {
 	return resp.Header.Get("x-auth-token")
 }
 
-func (gc *GameClient) PostFire() {
+func (gc *GameClient) PostFire(coord, token string) string {
 
+	data := map[string]string{"coord": coord}
+	jsonData, _ := json.Marshal(data)
+
+	req, _ := http.NewRequest("POST", ServerFireAddress, bytes.NewBuffer(jsonData))
+	req.Header.Add("X-auth-token", token)
+	resp, err := gc.HttpClient.Do(req)
+
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	response := string(body)
+	return response
 }
 
 func (gc *GameClient) GetRequest(address, token string) string {
