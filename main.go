@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"main/game"
 	"main/game_client"
 	"net/http"
@@ -24,8 +23,6 @@ func main() {
 		"J3",
 	}
 	//newGame := game.NewGame(gc)
-	newGame := game.NewGameParams(gc, coords, "desc", "Kacper", "", true)
-	newGame.DisplayBoard()
-	fmt.Print(newGame.Token + "\n")
-	newGame.Fire("A2")
+	newGame := game.NewGameParams(gc, coords, "Arrrrrr!!!", "Sonda", "", true)
+	newGame.StartGame()
 }
