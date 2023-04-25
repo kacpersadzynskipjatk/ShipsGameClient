@@ -21,6 +21,8 @@ type StatusResponse struct {
 	Opponent       string   `json:"opponent"`
 	ShouldFire     bool     `json:"should_fire"`
 	Timer          int      `json:"timer"`
+
+	Message string `json:"message"`
 }
 
 func (r *StatusResponse) SetResponse(rawData *http.Response) {
@@ -33,6 +35,8 @@ func (r *StatusResponse) GetResponse() Response {
 
 type BoardResponse struct {
 	Board []string `json:"board"`
+
+	Message string `json:"message"`
 }
 
 func (r *BoardResponse) SetResponse(rawData *http.Response) {
@@ -44,16 +48,14 @@ func (r *BoardResponse) GetResponse() Response {
 }
 
 type StartGameResponse struct {
-	Token   string
+	Token string
+
 	Message string `json:"message"`
 }
 
 func (r *StartGameResponse) SetResponse(rawData *http.Response) {
-	if rawData.StatusCode != http.StatusOK {
-		json.NewDecoder(rawData.Body).Decode(&r)
-	} else {
-		r.Token = rawData.Header.Get("x-auth-token")
-	}
+	json.NewDecoder(rawData.Body).Decode(&r)
+	r.Token = rawData.Header.Get("x-auth-token")
 }
 
 func (r *StartGameResponse) GetResponse() Response {
@@ -62,6 +64,8 @@ func (r *StartGameResponse) GetResponse() Response {
 
 type FireResponse struct {
 	Result string `json:"result"`
+
+	Message string `json:"message"`
 }
 
 func (r *FireResponse) SetResponse(rawData *http.Response) {

@@ -5,8 +5,19 @@ import (
 	"github.com/fatih/color"
 	"github.com/grupawp/warships-lightgui/v2"
 	"main/game_client"
+	"os"
+	"text/tabwriter"
 	"time"
 )
+
+func boardConfig() *board.Board {
+	cfg := board.NewConfig()
+	cfg.HitChar = '#'
+	cfg.HitColor = color.FgRed
+	cfg.BorderColor = color.BgRed
+	cfg.RulerTextColor = color.BgBlue
+	return board.New(cfg)
+}
 
 type Game struct {
 	GameClient game_client.GameClient
@@ -26,9 +37,11 @@ func NewGame(c *game_client.GameClient) *Game {
 		Wpbot:      true,
 	}
 	resp := c.PostStartGame(&r)
+	b := boardConfig()
 	game := &Game{
 		GameClient: *c,
 		Token:      resp.Token,
+		Board:      b,
 	}
 	return game
 }
@@ -42,51 +55,70 @@ func NewGameParams(c *game_client.GameClient, coords []string, desc, nick, targe
 		Wpbot:      wpbot,
 	}
 	resp := c.PostStartGame(&r)
+	b := boardConfig()
 	game := &Game{
 		GameClient: *c,
 		Token:      resp.Token,
+		Board:      b,
 	}
 	return game
 }
+func (g *Game) endGameCheck() {
+	if g.StatusResp.GameStatus == "ended" {
+		fmt.Println("Gra zakończona")
+		if g.StatusResp.LastGameStatus == "win" {
+			fmt.Printf("Wygrałeś %s gratulacje!!! ", g.StatusResp.Nick)
+		} else if g.StatusResp.LastGameStatus == "lose" {
+			fmt.Printf("Przegrałeś :( wygrał: %s", g.StatusResp.Opponent)
+		}
+		os.Exit(0)
+	}
+}
 
-func (g *Game) StartGame() {
+func (g *Game) setOpponentShots() {
+	oppShots := g.StatusResp.OppShots
+	for _, shot := range oppShots {
+		state, _ := g.Board.HitOrMiss(board.Left, shot)
+		err := g.Board.Set(board.Left, shot, state)
+		if err != nil {
+			err = fmt.Errorf("board not set: %s", err)
+			fmt.Println(err)
+		}
+	}
+}
+func (g *Game) makeShot() {
 	for true {
-		g.CheckGameStatus()
-		if g.StatusResp.GameStatus == "end" {
-			fmt.Println("Gra zakończona")
-			//informacje o zwycięzcy
-			time.Sleep(10 * time.Second)
+		fmt.Println("Twoja Tura!\nWpisz koordynaty by strzelić:")
+		var coordFromUser string
+		fmt.Scanln(&coordFromUser)
+		g.Fire(coordFromUser)
+		state, _ := g.Board.HitOrMiss(board.Right, coordFromUser)
+		err := g.Board.Set(board.Right, coordFromUser, state)
+		if err != nil {
+			err = fmt.Errorf("board not set: %s", err)
+			fmt.Println(err)
+		}
+		if g.FireResp.Result != "Hit" {
 			break
 		}
+	}
+}
+func (g *Game) StartGame() {
+	for true {
+		g.checkGameStatus()
+		g.endGameCheck()
 		if g.StatusResp.GameStatus != "game_in_progress" {
 			time.Sleep(1 * time.Second)
 			continue
 		}
-		g.DisplayBoard()
-		g.DisplayGameDescription()
 		if !g.StatusResp.ShouldFire {
 			time.Sleep(1 * time.Second)
 			continue
 		}
-
-		//pobierz wsp przeciwnika
-		oppShots := g.StatusResp.OppShots
-		for _, shot := range oppShots {
-			state, _ := g.Board.HitOrMiss(0, shot)
-			g.Board.Set(0, shot, state)
-		}
-		for true {
-			fmt.Println("Wykonaj ruch wpisz koordynaty:")
-			var coordFromUser string
-			fmt.Scanln(&coordFromUser)
-			g.Fire(coordFromUser)
-			state, _ := g.Board.HitOrMiss(1, coordFromUser)
-			g.Board.Set(1, coordFromUser, state)
-			if g.FireResp.Result != "Hit" {
-				break
-			}
-		}
-
+		g.displayBoard()
+		g.displayGameDescription()
+		g.setOpponentShots()
+		g.makeShot()
 	}
 }
 
@@ -98,25 +130,27 @@ func (g *Game) Fire(coord string) {
 	g.FireResp = resp
 }
 
-func (g *Game) CheckGameStatus() {
+func (g *Game) checkGameStatus() {
 	g.StatusResp = g.GameClient.GetGameStatus(g.Token)
 }
 
-func (g *Game) DisplayGameDescription() {
+func (g *Game) displayGameDescription() {
 	g.StatusResp = g.GameClient.GetGameDescription(g.Token)
-	fmt.Printf("Gracz 1: %s\nOpis: %s\n", g.StatusResp.Nick, g.StatusResp.Desc)
-	fmt.Printf("Gracz 2: %s\nOpis: %s\n", g.StatusResp.Opponent, g.StatusResp.OppDesc)
+	writer := tabwriter.NewWriter(os.Stdout, 9, 8, 0, '\t', 0)
+	fmt.Fprintf(writer, "%s  VS.  %s\n\n", g.StatusResp.Nick, g.StatusResp.Opponent)
+	fmt.Fprintf(writer, "Gracz\tOpis\n")
+	fmt.Fprintf(writer, "%s\t%s\n", "-----", "----")
+	fmt.Fprintf(writer, "%s\t%s\n", g.StatusResp.Nick, g.StatusResp.Desc)
+	fmt.Fprintf(writer, "%s\t%s\n\n", g.StatusResp.Opponent, g.StatusResp.OppDesc)
+	writer.Flush()
 }
 
-func (g *Game) DisplayBoard() {
-	cfg := board.NewConfig()
-	cfg.HitChar = '#'
-	cfg.HitColor = color.FgRed
-	cfg.BorderColor = color.BgRed
-	cfg.RulerTextColor = color.BgBlue
-	b := board.New(cfg)
-	g.Board = b
+func (g *Game) displayBoard() {
 	g.BoardResp = g.GameClient.GetGameBoards(g.Token)
-	b.Import(g.BoardResp.Board)
-	b.Display()
+	err := g.Board.Import(g.BoardResp.Board)
+	if err != nil {
+		err = fmt.Errorf("import error: %s", err)
+		fmt.Println(err)
+	}
+	g.Board.Display()
 }
