@@ -23,6 +23,7 @@ type Game struct {
 	GameClient game_client.GameClient
 	Token      string
 	StatusResp game_client.StatusResponse
+	GameDesc   game_client.StatusResponse
 	BoardResp  game_client.BoardResponse
 	FireResp   game_client.FireResponse
 	Board      *board.Board
@@ -36,11 +37,11 @@ func NewGame(c *game_client.GameClient) *Game {
 		TargetNick: "",
 		Wpbot:      true,
 	}
-	resp := c.PostStartGame(&r)
+	start := c.PostStartGame(&r)
 	b := boardConfig()
 	game := &Game{
 		GameClient: *c,
-		Token:      resp.Token,
+		Token:      start.Token,
 		Board:      b,
 	}
 	return game
@@ -54,11 +55,11 @@ func NewGameParams(c *game_client.GameClient, coords []string, desc, nick, targe
 		TargetNick: targetNick,
 		Wpbot:      wpbot,
 	}
-	resp := c.PostStartGame(&r)
+	start := c.PostStartGame(&r)
 	b := boardConfig()
 	game := &Game{
 		GameClient: *c,
-		Token:      resp.Token,
+		Token:      start.Token,
 		Board:      b,
 	}
 	return game
@@ -106,11 +107,16 @@ func (g *Game) makeShot() {
 func (g *Game) StartGame() {
 	for true {
 		g.checkGameStatus()
-		g.endGameCheck()
 		if g.StatusResp.GameStatus != "game_in_progress" {
 			time.Sleep(1 * time.Second)
 			continue
 		}
+		g.GameDesc = g.GameClient.GetGameDescription(g.Token)
+		break
+	}
+	for true {
+		g.checkGameStatus()
+		g.endGameCheck()
 		if !g.StatusResp.ShouldFire {
 			time.Sleep(1 * time.Second)
 			continue
@@ -135,13 +141,12 @@ func (g *Game) checkGameStatus() {
 }
 
 func (g *Game) displayGameDescription() {
-	g.StatusResp = g.GameClient.GetGameDescription(g.Token)
 	writer := tabwriter.NewWriter(os.Stdout, 9, 8, 0, '\t', 0)
-	fmt.Fprintf(writer, "%s  VS.  %s\n\n", g.StatusResp.Nick, g.StatusResp.Opponent)
+	fmt.Fprintf(writer, "%s  VS.  %s\n\n", g.GameDesc.Nick, g.GameDesc.Opponent)
 	fmt.Fprintf(writer, "Gracz\tOpis\n")
 	fmt.Fprintf(writer, "%s\t%s\n", "-----", "----")
-	fmt.Fprintf(writer, "%s\t%s\n", g.StatusResp.Nick, g.StatusResp.Desc)
-	fmt.Fprintf(writer, "%s\t%s\n\n", g.StatusResp.Opponent, g.StatusResp.OppDesc)
+	fmt.Fprintf(writer, "%s\t%s\n", g.GameDesc.Nick, g.GameDesc.Desc)
+	fmt.Fprintf(writer, "%s\t%s\n\n", g.GameDesc.Opponent, g.GameDesc.OppDesc)
 	writer.Flush()
 }
 
