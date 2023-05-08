@@ -4,15 +4,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 )
 
 const (
-	ServerAddress      = "https://go-pjatk-server.fly.dev/api/game"
-	ServerBoardAddress = "https://go-pjatk-server.fly.dev/api/game/board"
-	ServerFireAddress  = "https://go-pjatk-server.fly.dev/api/game/fire"
-	ServerDescAddress  = "https://go-pjatk-server.fly.dev/api/game/desc"
+	ServerAddress = "https://go-pjatk-server.fly.dev"
+	GameEndpoint  = "/api/game"
+	BoardEndpoint = "/api/game/board"
+	FireEndpoint  = "/api/game/fire"
+	DescEndpoint  = "/api/game/desc"
 )
 
 type GameClient struct {
@@ -26,85 +26,127 @@ func NewGameClient(c *http.Client) *GameClient {
 	return gc
 }
 
-func (gc *GameClient) postRequest(address, token string, r *Request) *http.Response {
-	jsonData, _ := json.Marshal(r)
-	req, _ := http.NewRequest("POST", address, bytes.NewBuffer(jsonData))
-	req.Header.Add("X-auth-token", token)
-	resp, _ := gc.HttpClient.Do(req)
-	return resp
-}
-
-func (gc *GameClient) PostStartGame(r Request) StartGameResponse {
-	resp := gc.postRequest(ServerAddress, "", &r)
-	defer resp.Body.Close()
-
-	startGameResponse := StartGameResponse{}
-	startGameResponse.SetResponse(resp)
-	if resp.StatusCode != http.StatusOK {
-		err := fmt.Errorf("unexpected status code: %d, message: %s", resp.StatusCode, startGameResponse.Message)
-		fmt.Println(err)
+func (gc *GameClient) postRequest(address, token string, r *Request) (*http.Response, error) {
+	jsonData, err := json.Marshal(r)
+	if err != nil {
+		return nil, err
 	}
-	return startGameResponse
-}
-
-func (gc *GameClient) PostFire(token string, r Request) FireResponse {
-	resp := gc.postRequest(ServerFireAddress, token, &r)
-	defer resp.Body.Close()
-
-	fireResponse := FireResponse{}
-	fireResponse.SetResponse(resp)
-	if resp.StatusCode != http.StatusOK {
-		err := fmt.Errorf("unexpected status code: %d, message: %s", resp.StatusCode, fireResponse.Message)
-		fmt.Println(err)
+	req, err := http.NewRequest(http.MethodPost, address, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return nil, err
 	}
-	return fireResponse
-}
-
-func (gc *GameClient) getRequest(address, token string) *http.Response {
-	req, _ := http.NewRequest("GET", address, nil)
 	req.Header.Add("X-auth-token", token)
 	resp, err := gc.HttpClient.Do(req)
 	if err != nil {
-		log.Fatalln(err)
+		return nil, err
 	}
-	return resp
+	return resp, nil
 }
 
-func (gc *GameClient) GetGameStatus(token string) StatusResponse {
-	resp := gc.getRequest(ServerAddress, token)
+func (gc *GameClient) PostStartGame(r Request) (StartGameResponse, error) {
+	resp, err := gc.postRequest(ServerAddress+GameEndpoint, "", &r)
+	if err != nil {
+		return StartGameResponse{}, err
+	}
+	defer resp.Body.Close()
+
+	startGameResponse := StartGameResponse{}
+	err = startGameResponse.SetResponse(resp)
+	if err != nil {
+		return StartGameResponse{}, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		err := fmt.Errorf("unexpected status code: %d, message: %s", resp.StatusCode, startGameResponse.Message)
+		return StartGameResponse{}, err
+	}
+	return startGameResponse, nil
+}
+
+func (gc *GameClient) PostFire(token string, r Request) (FireResponse, error) {
+	resp, err := gc.postRequest(ServerAddress+FireEndpoint, token, &r)
+	if err != nil {
+		return FireResponse{}, err
+	}
+	defer resp.Body.Close()
+
+	fireResponse := FireResponse{}
+	err = fireResponse.SetResponse(resp)
+	if err != nil {
+		return FireResponse{}, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		err := fmt.Errorf("unexpected status code: %d, message: %s", resp.StatusCode, fireResponse.Message)
+		return FireResponse{}, err
+	}
+	return fireResponse, nil
+}
+
+func (gc *GameClient) getRequest(address, token string) (*http.Response, error) {
+	req, err := http.NewRequest(http.MethodGet, address, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("X-auth-token", token)
+	resp, err := gc.HttpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
+func (gc *GameClient) GetGameStatus(token string) (StatusResponse, error) {
+	resp, err := gc.getRequest(ServerAddress+GameEndpoint, token)
+	if err != nil {
+		return StatusResponse{}, err
+	}
 	defer resp.Body.Close()
 
 	statusResponse := StatusResponse{}
-	statusResponse.SetResponse(resp)
+	err = statusResponse.SetResponse(resp)
+	if err != nil {
+		return StatusResponse{}, err
+	}
 	if resp.StatusCode != http.StatusOK {
 		err := fmt.Errorf("unexpected status code: %d, message: %s", resp.StatusCode, statusResponse.Message)
-		fmt.Println(err)
+		return StatusResponse{}, err
 	}
-	return statusResponse
+	return statusResponse, nil
 }
 
-func (gc *GameClient) GetGameBoards(token string) BoardResponse {
-	resp := gc.getRequest(ServerBoardAddress, token)
+func (gc *GameClient) GetGameBoards(token string) (BoardResponse, error) {
+	resp, err := gc.getRequest(ServerAddress+BoardEndpoint, token)
+	if err != nil {
+		return BoardResponse{}, err
+	}
 	defer resp.Body.Close()
 
 	boardResponse := BoardResponse{}
-	boardResponse.SetResponse(resp)
+	err = boardResponse.SetResponse(resp)
+	if err != nil {
+		return BoardResponse{}, err
+	}
 	if resp.StatusCode != http.StatusOK {
 		err := fmt.Errorf("unexpected status code: %d, message: %s", resp.StatusCode, boardResponse.Message)
-		fmt.Println(err)
+		return BoardResponse{}, err
 	}
-	return boardResponse
+	return boardResponse, nil
 }
 
-func (gc *GameClient) GetGameDescription(token string) StatusResponse {
-	resp := gc.getRequest(ServerDescAddress, token)
+func (gc *GameClient) GetGameDescription(token string) (StatusResponse, error) {
+	resp, err := gc.getRequest(ServerAddress+DescEndpoint, token)
+	if err != nil {
+		return StatusResponse{}, err
+	}
 	defer resp.Body.Close()
 
 	descResponse := StatusResponse{}
-	descResponse.SetResponse(resp)
+	err = descResponse.SetResponse(resp)
+	if err != nil {
+		return StatusResponse{}, err
+	}
 	if resp.StatusCode != http.StatusOK {
 		err := fmt.Errorf("unexpected status code: %d, message: %s", resp.StatusCode, descResponse.Message)
-		fmt.Println(err)
+		return StatusResponse{}, err
 	}
-	return descResponse
+	return descResponse, nil
 }

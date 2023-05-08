@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/fatih/color"
 	"github.com/grupawp/warships-lightgui/v2"
+	"log"
 	"main/game_client"
 	"os"
 	"text/tabwriter"
@@ -37,7 +38,10 @@ func NewGame(c *game_client.GameClient) *Game {
 		TargetNick: "",
 		Wpbot:      true,
 	}
-	start := c.PostStartGame(&r)
+	start, err := c.PostStartGame(&r)
+	if err != nil {
+		log.Fatalln(err)
+	}
 	b := boardConfig()
 	game := &Game{
 		GameClient: *c,
@@ -55,7 +59,10 @@ func NewGameParams(c *game_client.GameClient, coords []string, desc, nick, targe
 		TargetNick: targetNick,
 		Wpbot:      wpbot,
 	}
-	start := c.PostStartGame(&r)
+	start, err := c.PostStartGame(&r)
+	if err != nil {
+		log.Fatalln(err)
+	}
 	b := boardConfig()
 	game := &Game{
 		GameClient: *c,
@@ -64,6 +71,7 @@ func NewGameParams(c *game_client.GameClient, coords []string, desc, nick, targe
 	}
 	return game
 }
+
 func (g *Game) endGameCheck() {
 	if g.StatusResp.GameStatus == "ended" {
 		fmt.Println("Gra zakończona")
@@ -79,42 +87,78 @@ func (g *Game) endGameCheck() {
 func (g *Game) setOpponentShots() {
 	oppShots := g.StatusResp.OppShots
 	for _, shot := range oppShots {
-		state, _ := g.Board.HitOrMiss(board.Left, shot)
-		err := g.Board.Set(board.Left, shot, state)
+		state, err := g.Board.HitOrMiss(board.Left, shot)
 		if err != nil {
-			err = fmt.Errorf("board not set: %s", err)
-			fmt.Println(err)
+			log.Fatalln(err)
+		}
+		err = g.Board.Set(board.Left, shot, state)
+		if err != nil {
+			log.Fatalln(err)
 		}
 	}
 }
-func (g *Game) makeShot() {
-	for true {
-		fmt.Println("Twoja Tura!\nWpisz koordynaty by strzelić:")
-		var coordFromUser string
+func getValidCoords() string {
+	var coordFromUser string
+	for {
 		fmt.Scanln(&coordFromUser)
-		g.Fire(coordFromUser)
-		state, _ := g.Board.HitOrMiss(board.Right, coordFromUser)
-		err := g.Board.Set(board.Right, coordFromUser, state)
+		chars := []rune(coordFromUser)
+		if !(string(chars[0]) >= "A" && string(chars[0]) <= "J") {
+			fmt.Println("Niepoprawna litera, wpisz jeszcze raz:")
+			continue
+		} else if len(chars) == 2 {
+			if !(string(chars[1]) >= "1" && string(chars[1]) <= "9") {
+				fmt.Println("Niepoprawny numer, wpisz jeszcze raz:")
+				continue
+			}
+			break
+		} else if len(chars) == 3 {
+			if !(string(chars[1]) == "1" && string(chars[2]) == "0") {
+				fmt.Println("Niepoprawny numer, wpisz jeszcze raz:")
+				continue
+			}
+			break
+		} else {
+			fmt.Println("Niepoprawna długość koordynatów")
+			continue
+		}
+	}
+	return coordFromUser
+}
+
+func (g *Game) makeShot() {
+	for {
+		fmt.Println("Twoja Tura!\nWpisz koordynaty by strzelić:")
+		coord := getValidCoords()
+		g.Fire(coord)
+		state, err := g.Board.HitOrMiss(board.Right, coord)
 		if err != nil {
-			err = fmt.Errorf("board not set: %s", err)
-			fmt.Println(err)
+			log.Fatalln(err)
+		}
+		err = g.Board.Set(board.Right, coord, state)
+		if err != nil {
+			log.Fatalln(err)
 		}
 		if g.FireResp.Result != "Hit" {
 			break
 		}
 	}
 }
+
 func (g *Game) StartGame() {
-	for true {
+	for {
 		g.checkGameStatus()
 		if g.StatusResp.GameStatus != "game_in_progress" {
 			time.Sleep(1 * time.Second)
 			continue
 		}
-		g.GameDesc = g.GameClient.GetGameDescription(g.Token)
+		resp, err := g.GameClient.GetGameDescription(g.Token)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		g.GameDesc = resp
 		break
 	}
-	for true {
+	for {
 		g.checkGameStatus()
 		g.endGameCheck()
 		if !g.StatusResp.ShouldFire {
@@ -132,12 +176,19 @@ func (g *Game) Fire(coord string) {
 	r := game_client.FireRequest{
 		Coord: coord,
 	}
-	resp := g.GameClient.PostFire(g.Token, &r)
+	resp, err := g.GameClient.PostFire(g.Token, &r)
+	if err != nil {
+		log.Fatalln(err)
+	}
 	g.FireResp = resp
 }
 
 func (g *Game) checkGameStatus() {
-	g.StatusResp = g.GameClient.GetGameStatus(g.Token)
+	resp, err := g.GameClient.GetGameStatus(g.Token)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	g.StatusResp = resp
 }
 
 func (g *Game) displayGameDescription() {
@@ -151,11 +202,15 @@ func (g *Game) displayGameDescription() {
 }
 
 func (g *Game) displayBoard() {
-	g.BoardResp = g.GameClient.GetGameBoards(g.Token)
-	err := g.Board.Import(g.BoardResp.Board)
+	resp, err := g.GameClient.GetGameBoards(g.Token)
 	if err != nil {
-		err = fmt.Errorf("import error: %s", err)
-		fmt.Println(err)
+		log.Fatalln(err)
+	}
+	g.BoardResp = resp
+
+	err = g.Board.Import(g.BoardResp.Board)
+	if err != nil {
+		log.Fatalln(err)
 	}
 	g.Board.Display()
 }
