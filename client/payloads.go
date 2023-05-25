@@ -1,14 +1,4 @@
-package game_client
-
-import (
-	"encoding/json"
-	"errors"
-	"net/http"
-)
-
-type Response interface {
-	SetResponse(*http.Response) error
-}
+package client
 
 type StatusResponse struct {
 	Desc           string   `json:"desc"`
@@ -24,26 +14,10 @@ type StatusResponse struct {
 	Message string `json:"message"`
 }
 
-func (r *StatusResponse) SetResponse(rawData *http.Response) error {
-	err := json.NewDecoder(rawData.Body).Decode(&r)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 type BoardResponse struct {
 	Board []string `json:"board"`
 
 	Message string `json:"message"`
-}
-
-func (r *BoardResponse) SetResponse(rawData *http.Response) error {
-	err := json.NewDecoder(rawData.Body).Decode(&r)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 type StartGameResponse struct {
@@ -52,29 +26,21 @@ type StartGameResponse struct {
 	Message string `json:"message"`
 }
 
-func (r *StartGameResponse) SetResponse(rawData *http.Response) error {
-	r.Token = rawData.Header.Get("x-auth-token")
-	if r.Token == "" {
-		return errors.New("token is empty")
-	}
-	return nil
-}
-
 type FireResponse struct {
 	Result string `json:"result"`
 
 	Message string `json:"message"`
 }
 
-func (r *FireResponse) SetResponse(rawData *http.Response) error {
-	err := json.NewDecoder(rawData.Body).Decode(&r)
-	if err != nil {
-		return err
-	}
-	return nil
+type AbandonResponse struct {
+	Message string `json:"message"`
 }
 
-type Request interface {
+type OpponentResponse struct {
+	GameStatus string `json:"game_status"`
+	Nick       string `json:"nick"`
+
+	Message string `json:"message"`
 }
 
 type FireRequest struct {
