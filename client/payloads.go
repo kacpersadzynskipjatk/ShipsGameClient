@@ -20,12 +20,6 @@ type BoardResponse struct {
 	Message string `json:"message"`
 }
 
-type StartGameResponse struct {
-	Token string
-
-	Message string `json:"message"`
-}
-
 type FireResponse struct {
 	Result string `json:"result"`
 
@@ -36,11 +30,31 @@ type AbandonResponse struct {
 	Message string `json:"message"`
 }
 
-type OpponentResponse struct {
+type LobbyResponse struct {
 	GameStatus string `json:"game_status"`
 	Nick       string `json:"nick"`
 
 	Message string `json:"message"`
+}
+
+type PlayerStatsResponse struct {
+	Stats struct {
+		Games  int    `json:"games"`
+		Nick   string `json:"nick"`
+		Points int    `json:"points"`
+		Rank   int    `json:"rank"`
+		Wins   int    `json:"wins"`
+	} `json:"stats"`
+}
+
+type TopPlayersStatsResponse struct {
+	Stats []struct {
+		Games  int    `json:"games"`
+		Nick   string `json:"nick"`
+		Points int    `json:"points"`
+		Rank   int    `json:"rank"`
+		Wins   int    `json:"wins"`
+	} `json:"stats"`
 }
 
 type FireRequest struct {
