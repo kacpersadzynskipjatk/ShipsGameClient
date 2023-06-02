@@ -87,3 +87,47 @@ func getUserInputWithLengthLimit(maxLength int) (string, error) {
 		}
 	}
 }
+
+// getUserInputWithLengthLimitSpaceAllowed prompts the user to enter input and returns the valid user input
+// with a maximum length limit and restricted to the specified valid characters.
+// It continuously prompts the user until a valid input within the length and character limit is provided.
+// The function expects the maximum length of the user input.
+// It returns the user input as a string and any error that occurred during input reading.
+func getUserInputWithLengthLimitSpaceAllowed(maxLength int) (string, error) {
+	validChars := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._- "
+
+	for {
+		// Prompt the user to enter their input
+		fmt.Printf("Enter your input (maximum %d characters): ", maxLength)
+
+		// Read user input from standard input
+		reader := bufio.NewReader(os.Stdin)
+		input, _, err := reader.ReadLine()
+		if err != nil {
+			return "", fmt.Errorf("error reading input: %v", err)
+		}
+
+		// Convert the input bytes to string
+		inputString := string(input)
+
+		// Validate the input length
+		if len(inputString) > maxLength {
+			fmt.Printf("Invalid input. Maximum input length is %d characters.\n", maxLength)
+			continue
+		}
+
+		// Validate the input characters
+		for _, ch := range inputString {
+			if !strings.ContainsRune(validChars, ch) {
+				inputString = ""
+				fmt.Printf("Invalid input. Input contains invalid characters. rune: '%s'\n", string(ch))
+				break
+			}
+		}
+
+		// If the input is valid, return it
+		if inputString != "" {
+			return inputString, nil
+		}
+	}
+}

@@ -7,6 +7,9 @@ import (
 	"log"
 )
 
+// ShipPlacementChoice allows the player to choose whether he wants to place his ships himself or not.
+// If no default placement is selected.
+// The user clicks on the board to place the ships.
 func ShipPlacementChoice(myBoardStates *[10][10]gui.State) []string {
 	fmt.Println("Do you want to place your ships? Enter (y or n): ")
 	choice, err := getUserInputFromOptions([]string{"y", "n"})
@@ -87,4 +90,22 @@ func shipsOnlyBoard(states *[10][10]gui.State) {
 			}
 		}
 	}
+}
+
+// guiConfig configures and returns a GUI, along with two boards.
+// It creates a new GUI with the "true" parameter indicating ANSI color support.
+// It also creates two boards using the provided configuration.
+// The configuration can be modified by changing the values of the `cfg` variable.
+// The function then draws the boards on the GUI and returns the GUI, the first board, and the second board.
+func guiConfig() (*gui.GUI, *gui.Board, *gui.Board) {
+
+	// Change cfg values to configure the board
+	cfg := gui.NewBoardConfig()
+
+	b1 := gui.NewBoard(1, 4, cfg)
+	b2 := gui.NewBoard(50, 4, cfg)
+	g := gui.NewGUI(true)
+	g.Draw(b1)
+	g.Draw(b2)
+	return g, b1, b2
 }

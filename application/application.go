@@ -30,7 +30,7 @@ type Application struct {
 	allShots            int                     // allShots stores the total number of shots fired.
 	hitShots            int                     // hitShots stores the number of shots that hit the enemy's ships.
 	nick                string                  // nick stores the player's nickname.
-	desc                string                  // desc stores the game description.
+	desc                string                  // desc stores the player's description.
 }
 
 // NewGame creates a new game application.
