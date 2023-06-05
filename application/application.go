@@ -31,6 +31,7 @@ type Application struct {
 	hitShots            int                     // hitShots stores the number of shots that hit the enemy's ships.
 	nick                string                  // nick stores the player's nickname.
 	desc                string                  // desc stores the player's description.
+	enemyLeftShips      map[int]int
 }
 
 // NewGame creates a new game application.
@@ -42,6 +43,13 @@ func NewGame(c *client.Client) *Application {
 
 	states := [10][10]gui.State{}
 	setBoardToEmpty(&states)
+
+	enemyLeftShips := map[int]int{
+		1: 4,
+		2: 3,
+		3: 2,
+		4: 1,
+	}
 
 	shipsCoords := []string{
 		"F1", "F2", "F3", "F4", "A1", "B1", "C1", "A3", "B3", "C3", "A5", "B5", "A7", "B7", "A9", "B9", "J9", "J7", "J5", "J3"}
@@ -58,6 +66,7 @@ func NewGame(c *client.Client) *Application {
 		currentShipsCoords:  shipsCoords,
 		allShots:            0,
 		hitShots:            0,
+		enemyLeftShips:      enemyLeftShips,
 	}
 	return app
 }
@@ -91,7 +100,7 @@ func (g *Application) StartGame() {
 	clearTerminal()
 	g.nick, g.desc = NickAndDescChoice()
 	g.displayMainMenu()
-	turnChannel := make(chan bool)
+	turnChannel := make(chan bool, 1)
 
 	for true {
 		g.initializeGame()
@@ -107,7 +116,7 @@ func (g *Application) StartGame() {
 
 		saveGameStats(g.allShots, g.hitShots)
 
-		g.abandonGame()
+		//g.abandonGame()
 
 		g.playAgainChoice()
 	}
@@ -140,6 +149,12 @@ func (g *Application) playAgainChoice() {
 	setBoardToEmpty(&g.EnemyBoardStates)
 	g.EnemyBoard.SetStates(g.EnemyBoardStates)
 	shipsOnlyBoard(&g.MyBoardStates)
+	g.enemyLeftShips = map[int]int{
+		1: 4,
+		2: 3,
+		3: 2,
+		4: 1,
+	}
 	if choice == "y" {
 		g.OpponentChoice()
 	} else {
@@ -171,7 +186,6 @@ func (g *Application) initializeGame() {
 		resp, err := g.Client.SendRequest(http.MethodGet, client.DescEndpoint, g.Token, nil, &client.StatusResponse{})
 		if err != nil {
 			log.Fatalln(err)
-			break
 		}
 		g.GameDesc = resp.(*client.StatusResponse)
 		break
@@ -187,15 +201,31 @@ func (g *Application) displayGameDescription() {
 	t := gui.NewText(5, 2, playersNicks, nil)
 	g.Gui.Draw(t)
 
+	t2 := gui.NewText(5, 4, "Your Board", nil)
+	g.Gui.Draw(t2)
+	t3 := gui.NewText(55, 4, "Enemy Board", nil)
+	g.Gui.Draw(t3)
+	x := 96
+	legend := gui.NewText(x, 10, "H - means that the shot hit the ship\n", nil)
+	g.Gui.Draw(legend)
+	legend = gui.NewText(x, 11, "S - means that your ship is placed here\n", nil)
+	g.Gui.Draw(legend)
+	legend = gui.NewText(x, 12, "M - means that the shot missed all ships\n", nil)
+	g.Gui.Draw(legend)
+	legend = gui.NewText(x, 13, "~ - shows the fields that weren't shot\n", nil)
+	g.Gui.Draw(legend)
+
+	g.displayEnemyLeftShips()
+
 	chunks := splitString(g.GameDesc.Desc, 45)
 	for i, chunk := range chunks {
-		d := gui.NewText(1, 26+i, chunk, nil)
+		d := gui.NewText(1, 28+i, chunk, nil)
 		g.Gui.Draw(d)
 	}
 
 	chunks2 := splitString(g.GameDesc.OppDesc, 45)
 	for i, chunk := range chunks2 {
-		d := gui.NewText(50, 26+i, chunk, nil)
+		d := gui.NewText(50, 28+i, chunk, nil)
 		g.Gui.Draw(d)
 	}
 }

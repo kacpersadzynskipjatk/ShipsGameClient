@@ -2,11 +2,13 @@ package application
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
 	"runtime"
 	"strings"
+	"text/tabwriter"
 )
 
 // splitString splits a string into chunks of a specified size.
@@ -144,4 +146,36 @@ func deleteOldStatsFile() {
 		fmt.Printf("Error deleting file %s: %s\n", filename, err.Error())
 		return
 	}
+}
+
+func DisplayInstructions() {
+	// Read the instructions from the text file
+	instructions, err := ioutil.ReadFile("instructions.txt")
+	if err != nil {
+		fmt.Println("Error reading the file:", err)
+		return
+	}
+
+	// Convert the instructions to a string
+	instructionsStr := string(instructions)
+
+	// Remove leading/trailing whitespaces and split the instructions into separate lines
+	lines := strings.Split(strings.TrimSpace(instructionsStr), "\n")
+
+	// Create a tab writer for pretty formatting
+	w := tabwriter.NewWriter(
+		os.Stdout,
+		0,                                    // minwidth
+		0,                                    // tabwidth
+		2,                                    // padding
+		' ',                                  // padchar
+		tabwriter.AlignRight|tabwriter.Debug) // flags
+
+	// Loop through the lines and format them
+	for _, line := range lines {
+		fmt.Fprintln(w, line)
+	}
+
+	// Flush the tab writer (print the formatted output)
+	w.Flush()
 }

@@ -20,8 +20,9 @@ func (g *Application) displayMainMenu() {
 		fmt.Println("2. Display Waiting Players")
 		fmt.Println("3. Display statistics")
 		fmt.Println("4. Display player ranking")
+		fmt.Println("5. How to play")
 		fmt.Println("Press 'Ctrl+C' to exit")
-		menuChoice, err := getUserInputFromOptions([]string{"1", "2", "3", "4"})
+		menuChoice, err := getUserInputFromOptions([]string{"1", "2", "3", "4", "5"})
 		if err != nil {
 			log.Fatalln(err)
 		}
@@ -36,6 +37,8 @@ func (g *Application) displayMainMenu() {
 			displayStatistics()
 		case "4":
 			g.displayPlayerRanking()
+		case "5":
+			DisplayInstructions()
 		}
 	}
 }
@@ -71,10 +74,8 @@ func (g *Application) OpponentChoice() {
 		fmt.Println("Type enemy nick or press ENTER to wait")
 
 		// Prompt the user to enter the target player's nick
-		targetNick, err := getUserInputWithLengthLimit(20)
-		if err != nil {
-			log.Fatalln(err)
-		}
+		var targetNick string
+		fmt.Scanln(&targetNick)
 		clearTerminal()
 
 		// Generate a game token for playing with another player

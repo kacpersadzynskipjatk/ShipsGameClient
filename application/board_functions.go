@@ -24,7 +24,7 @@ func ShipPlacementChoice(myBoardStates *[10][10]gui.State) []string {
 		text1 := gui.NewText(1, 1, "Click on board to set ships:", nil)
 		g.Draw(text1)
 		g.Draw(b)
-		go SetShips(b, myBoardStates)
+		go SetShips(g, b, myBoardStates)
 		g.Start(context.Background(), nil)
 
 		var coords []string
@@ -49,10 +49,11 @@ func ShipPlacementChoice(myBoardStates *[10][10]gui.State) []string {
 // If the corresponding board state is Empty, it sets it to Ship and decreases the ship counter.
 // If the corresponding board state is already a Ship, it resets it to Empty and increases the ship counter.
 // The function updates the board states and continues until all ships are placed.
-func SetShips(b *gui.Board, boardStates *[10][10]gui.State) {
+func SetShips(g *gui.GUI, b *gui.Board, boardStates *[10][10]gui.State) {
 	setBoardToEmpty(boardStates)
 	counter := 20
-	for counter > 0 {
+	loop := true
+	for loop {
 		coord := b.Listen(context.Background())
 		c := StringToIntCoord(coord)
 		switch boardStates[c.X][c.Y] {
@@ -62,6 +63,41 @@ func SetShips(b *gui.Board, boardStates *[10][10]gui.State) {
 		case gui.Ship:
 			boardStates[c.X][c.Y] = gui.Empty
 			counter++
+		}
+		if counter == 0 {
+			visitedCoords := make([]Coord, 0)
+			leftShips := map[int]int{
+				1: 4,
+				2: 3,
+				3: 2,
+				4: 1,
+			}
+			for i := 0; i < 10; i++ {
+				for j := 0; j < 10; j++ {
+					x := Coord{i, j}
+					if boardStates[i][j] == gui.Ship && !x.containedIn(visitedCoords) {
+						shipSize := 0
+						DetectShip(boardStates, x, &visitedCoords, &shipSize, gui.Ship, false)
+						if shipSize >= 1 && shipSize <= 4 {
+							leftShips[shipSize]--
+						}
+					}
+				}
+			}
+			var flag = true
+			for i := 1; i <= 4; i++ {
+				if leftShips[i] != 0 {
+					flag = false
+					text1 := gui.NewText(1, 28, "Wrong ships placement, correct it!", nil)
+					g.Draw(text1)
+					break
+				}
+			}
+			if flag == true {
+				text1 := gui.NewText(1, 28, "Your ships are correct, press Ctrl + C", nil)
+				g.Draw(text1)
+				loop = false
+			}
 		}
 		b.SetStates(*boardStates)
 	}
@@ -102,8 +138,8 @@ func guiConfig() (*gui.GUI, *gui.Board, *gui.Board) {
 	// Change cfg values to configure the board
 	cfg := gui.NewBoardConfig()
 
-	b1 := gui.NewBoard(1, 4, cfg)
-	b2 := gui.NewBoard(50, 4, cfg)
+	b1 := gui.NewBoard(1, 6, cfg)
+	b2 := gui.NewBoard(50, 6, cfg)
 	g := gui.NewGUI(true)
 	g.Draw(b1)
 	g.Draw(b2)

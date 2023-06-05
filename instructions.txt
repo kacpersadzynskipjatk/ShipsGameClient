@@ -1,0 +1,40 @@
+Instructions for Ships Game Application:
+
+Set your nickname and description:
+When you launch the game, you will be prompted to set your nickname and provide a brief description.
+Follow the on-screen instructions to enter your desired nickname and description.
+
+Main Menu options:
+Upon entering the game, you will be presented with the main menu.
+The main menu will display several options, including:
+Statistics: Select this option to view your game statistics and achievements.
+Ranking: Choose this option to view the leaderboard and see how you rank against other players.
+Play a Game: Select this option to start a new game.
+
+Set your ships:
+If you choose to play a game, you will be prompted to set up your ships on the game grid.
+Follow the instructions to position your ships by selecting the cells on the grid where you want to place them.
+You may have different types of ships with varying sizes, which should be placed strategically.
+
+Choose the game mode:
+After setting up your ships, you will be asked to choose the game mode.
+You can select either "Bot" or "Player" mode.
+Bot: This mode allows you to play against an AI-controlled opponent.
+Player: This mode enables you to play against another human player, either locally or online.
+
+Turns and making shots:
+The game follows a turn-based system.
+When it's your turn, you will see the game grid displaying your opponent's field.
+Click on the desired cell on the grid to make a shot.
+Use your mouse to click on the appropriate cell.
+
+Outcome of your shot:
+After making a shot, the game will display the result.
+If you miss, the game will notify you, and it will be your opponent's turn.
+If you hit an enemy ship, the game will indicate the hit and allow you to take another shot.
+
+Game continuation and victory:
+The game continues until one player successfully sinks all of their opponent's ships.
+The first player to destroy all enemy ships wins the game.
+Once the game is over, the victory will be declared, and you can choose to play again or return to the main menu.
+Enjoy playing the Ships Game!

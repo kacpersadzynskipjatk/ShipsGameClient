@@ -6,7 +6,6 @@ import (
 	"log"
 	"main/client"
 	"net/http"
-	"os"
 	"strconv"
 	"time"
 )
@@ -18,23 +17,30 @@ import (
 // It then sets the opponent's shots on the player's board and updates the GUI.
 // After that, it displays text to indicate that it's the player's turn and calls the makeShotAndCheckEndGame function.
 // The function repeats the above steps until the game ends.
-func (g *Application) manageTurn(ch chan bool) {
-	enemyTurnText := gui.NewText(5, 0, "Enemy turn 😒", nil)
-	myTurnText := gui.NewText(5, 0, "Your  turn 😎", nil)
+func (g *Application) manageTurn(channel chan bool) {
+	enemyTurnText := gui.NewText(5, 0, "Enemy turn wait! 😒", nil)
+	myTurnText := gui.NewText(5, 0, "Your turn shoot! 😎", nil)
 	loop := true
+	ch := make(chan bool, 1)
 	for loop {
-		g.Gui.Draw(enemyTurnText)
-		g.checkGameStatus()
-		if !g.StatusResp.ShouldFire {
-			time.Sleep(1 * time.Second)
-			continue
+		select {
+		case <-channel:
+			ch <- true
+			return
+		default:
+			g.Gui.Draw(enemyTurnText)
+			g.checkGameStatus()
+			if !g.StatusResp.ShouldFire {
+				time.Sleep(1 * time.Second)
+				continue
+			}
+			go g.displayTimer(ch)
+			g.setOpponentShots()
+			time.Sleep(200 * time.Millisecond)
+			g.Gui.Draw(myTurnText)
+			loop = !g.makeShotAndCheckEndGame()
+			ch <- true
 		}
-		go g.displayTimer(ch)
-		g.setOpponentShots()
-		time.Sleep(200 * time.Millisecond)
-		g.Gui.Draw(myTurnText)
-		loop = !g.makeShotAndCheckEndGame()
-		ch <- true
 	}
 }
 
@@ -60,16 +66,15 @@ func (g *Application) displayTimer(ch chan bool) {
 		case <-ch:
 			return
 		default:
-			text = gui.NewText(20, 0, "Time left:"+strconv.Itoa(timeLeft), nil)
+			text = gui.NewText(28, 0, "Time left:"+strconv.Itoa(timeLeft), nil)
 			g.Gui.Draw(text)
 			time.Sleep(1 * time.Second)
 			timeLeft--
 		}
 		i++
 		if timeLeft == 0 {
-			clearTerminal()
-			fmt.Println("Time ran out, application is off")
-			os.Exit(0)
+			fmt.Println(" Time ran out, press Ctrl + C")
+			break
 		}
 	}
 }
@@ -130,7 +135,10 @@ func (g *Application) makeShotAndCheckEndGame() bool {
 			g.hitShots++
 			g.EnemyBoardStates[c.X][c.Y] = gui.Hit
 			visitedCoords := make([]Coord, 0)
-			g.CreateShipBorder(c, &visitedCoords)
+			shipSize := 0
+			DetectShip(&g.EnemyBoardStates, c, &visitedCoords, &shipSize, gui.Hit, true)
+			g.enemyLeftShips[shipSize]--
+			g.displayEnemyLeftShips()
 			g.EnemyBoard.SetStates(g.EnemyBoardStates)
 			g.checkGameStatus()
 			endGame = g.endGameCheck()
@@ -138,6 +146,24 @@ func (g *Application) makeShotAndCheckEndGame() bool {
 		}
 	}
 	return endGame
+}
+
+func (g *Application) displayEnemyLeftShips() {
+	x := 96
+	ships := gui.NewText(x, 15, "Enemy ships left:\n", nil)
+	g.Gui.Draw(ships)
+	text := fmt.Sprintf("Size 1 - %d\n", g.enemyLeftShips[1])
+	ships = gui.NewText(x, 16, text, nil)
+	g.Gui.Draw(ships)
+	text = fmt.Sprintf("Size 2 - %d\n", g.enemyLeftShips[2])
+	ships = gui.NewText(x, 17, text, nil)
+	g.Gui.Draw(ships)
+	text = fmt.Sprintf("Size 3 - %d\n", g.enemyLeftShips[3])
+	ships = gui.NewText(x, 18, text, nil)
+	g.Gui.Draw(ships)
+	text = fmt.Sprintf("Size 4 - %d\n", g.enemyLeftShips[4])
+	ships = gui.NewText(x, 19, text, nil)
+	g.Gui.Draw(ships)
 }
 
 // Fire sends a fire request to the server to execute a shot at the specified coordinate.
@@ -154,8 +180,9 @@ func (g *Application) Fire(coord string) {
 	g.FireResp = resp.(*client.FireResponse)
 }
 
-// CreateShipBorder creates a border around the ship by setting the nearest fields on board to Miss value.
-func (g *Application) CreateShipBorder(c Coord, visitedCoords *[]Coord) {
+func DetectShip(boardToUpdate *[10][10]gui.State, c Coord, visitedCoords *[]Coord, shipSize *int, countedField gui.State, makeBorder bool) {
+	*shipSize++
+	*visitedCoords = append(*visitedCoords, c)
 	for x := -1; x < 2; x++ {
 		for y := -1; y < 2; y++ {
 			dx := x + c.X
@@ -170,11 +197,10 @@ func (g *Application) CreateShipBorder(c Coord, visitedCoords *[]Coord) {
 			if nextCoord.containedIn(*visitedCoords) {
 				continue
 			}
-			*visitedCoords = append(*visitedCoords, c)
-			if g.EnemyBoardStates[dx][dy] == gui.Empty {
-				g.EnemyBoardStates[dx][dy] = gui.Miss
-			} else if g.EnemyBoardStates[dx][dy] == gui.Hit {
-				g.CreateShipBorder(nextCoord, visitedCoords)
+			if makeBorder && boardToUpdate[dx][dy] == gui.Empty {
+				boardToUpdate[dx][dy] = gui.Miss
+			} else if boardToUpdate[dx][dy] == countedField {
+				DetectShip(boardToUpdate, nextCoord, visitedCoords, shipSize, countedField, makeBorder)
 			}
 		}
 	}
@@ -186,7 +212,7 @@ func (g *Application) CreateShipBorder(c Coord, visitedCoords *[]Coord) {
 // The function returns true if the game has ended, and false otherwise.
 func (g *Application) endGameCheck() bool {
 	if g.StatusResp.GameStatus == "ended" {
-		text1 := gui.NewText(5, 0, "Game has ended", nil)
+		text1 := gui.NewText(5, 0, "The game has ended", nil)
 		var text2 *gui.Text
 		g.Gui.Draw(text1)
 		if g.StatusResp.LastGameStatus == "win" {
